@@ -1,0 +1,5 @@
+# Redirect naked domain to www (or vice versa — adjust based on your Cloudflare setup)
+# https://icebreakerlive.com/* -> https://www.icebreakerlive.com/:splat 301
+
+# 404 fallback
+/*    /index.html   200
