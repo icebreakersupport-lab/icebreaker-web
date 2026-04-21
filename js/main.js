@@ -61,31 +61,68 @@ document.querySelectorAll('.faq-btn').forEach(btn => {
   });
 });
 
-// ── Notify form (launch waitlist) ─────────────────────────────────────────────
+// ── Notify form (launch waitlist — Formspree) ────────────────────────────────
+// The form POSTs directly to Formspree via its action attribute.
+// This JS layer adds:
+//   1. Client-side email validation with inline error state
+//   2. Loading state on the button during submission
+//   3. In-page success state so the page doesn't hard-redirect
 const notifyForm = document.querySelector('.notify-form');
 if (notifyForm) {
-  notifyForm.addEventListener('submit', (e) => {
+  notifyForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = notifyForm.querySelector('.notify-input');
-    const btn   = notifyForm.querySelector('.btn');
+    const btn   = notifyForm.querySelector('button[type="submit"]');
     const email = input.value.trim();
 
+    // Client-side validation
     if (!email || !email.includes('@')) {
       input.style.borderColor = '#FF3B5C';
       setTimeout(() => input.style.borderColor = '', 1500);
       return;
     }
 
-    // ── Replace with your actual waitlist endpoint ─────────────────────────
-    // e.g. a Cloudflare Worker, Formspree, or ConvertKit form action
-    // fetch('/api/waitlist', { method: 'POST', body: JSON.stringify({ email }) })
+    // Loading state
+    const originalLabel = btn.textContent;
+    btn.textContent = 'Sending…';
+    btn.disabled = true;
 
-    btn.textContent = 'You\'re on the list ✓';
+    try {
+      const res = await fetch(notifyForm.action, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+        body: new FormData(notifyForm),
+      });
+
+      if (res.ok) {
+        // Success
+        btn.textContent = "You're on the list ✓";
+        btn.style.background = '#4CD98A';
+        input.value = '';
+        input.disabled = true;
+      } else {
+        // Formspree returned an error — re-enable so they can retry
+        btn.textContent = originalLabel;
+        btn.disabled = false;
+        input.style.borderColor = '#FF3B5C';
+        setTimeout(() => input.style.borderColor = '', 2000);
+      }
+    } catch (_) {
+      // Network failure — re-enable
+      btn.textContent = originalLabel;
+      btn.disabled = false;
+    }
+  });
+
+  // Show success message if Formspree redirected back with ?joined=1
+  if (new URLSearchParams(window.location.search).get('joined') === '1') {
+    const btn   = notifyForm.querySelector('button[type="submit"]');
+    const input = notifyForm.querySelector('.notify-input');
+    btn.textContent = "You're on the list ✓";
     btn.style.background = '#4CD98A';
     btn.disabled = true;
-    input.value = '';
     input.disabled = true;
-  });
+  }
 }
 
 // ── Smooth scroll for anchor links ────────────────────────────────────────────
